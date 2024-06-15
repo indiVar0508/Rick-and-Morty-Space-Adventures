@@ -1,0 +1,18 @@
+[package]
+name = "rick_n_morty_space_travel"
+version = "0.1.0"
+authors = ["Indivar Mishra <indimishra@gmail.com>"]
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+rusty_engine = "6.0.0"
+
+[profile.dev]
+opt-level = 3
+debug = false
+debug-assertions = false
+overflow-checks = false
+incremental = false
+codegen-units = 16
