@@ -1,11 +1,15 @@
+use bevy::render::render_resource::encase::rts_array::Length;
 use rand::Rng;
-use rick_n_morty_space_travel::{star::Star, TOTAL_STARS, WINDOW_HEIGHT, WINDOW_WITDH};
+use rick_n_morty_space_travel::{
+    astroid::Astroid, star::Star, TOTAL_ASTROIDS, TOTAL_STARS, WINDOW_HEIGHT, WINDOW_WITDH,
+};
 use rusty_engine::prelude::*;
 
 #[derive(Resource)]
 struct GameState {
     jet_speed: f32,
     stars: Vec<Star>,
+    astroids: Vec<Astroid>,
 }
 
 fn main() {
@@ -29,6 +33,23 @@ fn main() {
         stars.push(star);
     }
 
+    let mut astroids: Vec<Astroid> = vec![];
+    let img_options: Vec<&str> = vec![
+        "sprite/rick_n_morty/astroid_zero.png",
+        "sprite/rick_n_morty/astroid_one.png",
+        "sprite/rick_n_morty/astroid_zero_rotated.png",
+        "sprite/rick_n_morty/astroid_one_rotated.png",
+    ];
+    for i in 0..TOTAL_ASTROIDS {
+        let img_path = img_options[i % img_options.length()];
+        let astroid_sprite = game.add_sprite(format!("astroid_{}", i), img_path);
+        astroid_sprite.layer = 1.0;
+        astroid_sprite.scale = 0.1;
+        // At time of creation everything is hidden
+        astroid_sprite.translation.x = WINDOW_HEIGHT * 5.0;
+        astroids.push(Astroid::new());
+    }
+
     let space_ship_sprite = game.add_sprite("space_ship", "sprite/rick_n_morty/spaceship.png");
     // scale down the the space_ship size
     // FIXME: tranparent image breaks pixel.
@@ -37,9 +58,11 @@ fn main() {
     space_ship_sprite.layer = 2.0;
     game.add_logic(space_ship_logic);
     game.add_logic(star_logic);
+    game.add_logic(astroid_logic);
     game.run(GameState {
         jet_speed: 340.0,
         stars,
+        astroids,
     });
 }
 
@@ -61,6 +84,35 @@ fn star_logic(engine: &mut Engine, game_state: &mut GameState) {
         game_state.stars[i].co_ordinate.z -= rng.gen_range(0.0..10.0);
         if game_state.stars[i].co_ordinate.z < 1.0 {
             game_state.stars[i] = Star::new();
+        }
+    }
+}
+
+fn astroid_logic(engine: &mut Engine, game_state: &mut GameState) {
+    let mut rng = rand::thread_rng();
+    let chance: f32 = rng.gen_range(0.0..1.0);
+    if chance < 0.01 {
+        // 1% chance of seeing a astroid
+        for (i, astroid) in game_state.astroids.iter_mut().enumerate() {
+            if astroid.visible == false {
+                astroid.visible = true;
+                let astroid_sprite = engine.sprites.get_mut(&format!("astroid_{}", i)).unwrap();
+                astroid_sprite.translation.x = astroid.co_ordinate.x;
+                astroid_sprite.translation.y = astroid.co_ordinate.y;
+                break;
+            }
+        }
+    }
+    for i in 0..game_state.astroids.length() {
+        if game_state.astroids[i].visible == true {
+            let astroid_sprite = engine.sprites.get_mut(&format!("astroid_{}", i)).unwrap();
+            astroid_sprite.scale += 0.1 * engine.delta_f32;
+            if astroid_sprite.scale > 1.0 {
+                // it's past space_ship to make it disappear
+                astroid_sprite.translation.x = WINDOW_WITDH * 5.0;
+                astroid_sprite.scale = 0.1;
+                game_state.astroids[i] = Astroid::new();
+            }
         }
     }
 }
