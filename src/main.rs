@@ -1,3 +1,5 @@
+use std::process::exit;
+
 use bevy::render::render_resource::encase::rts_array::Length;
 use rand::Rng;
 use rick_n_morty_space_travel::{
@@ -45,6 +47,7 @@ fn main() {
         let astroid_sprite = game.add_sprite(format!("astroid_{}", i), img_path);
         astroid_sprite.layer = 1.0;
         astroid_sprite.scale = 0.1;
+        astroid_sprite.collision = true;
         // At time of creation everything is hidden
         astroid_sprite.translation.x = WINDOW_HEIGHT * 5.0;
         astroids.push(Astroid::new());
@@ -56,9 +59,11 @@ fn main() {
     space_ship_sprite.scale = 0.3;
     // Don't let stars run over spaceship
     space_ship_sprite.layer = 2.0;
+    space_ship_sprite.collision = true;
     game.add_logic(space_ship_logic);
     game.add_logic(star_logic);
     game.add_logic(astroid_logic);
+    game.add_logic(collision_logic);
     game.run(GameState {
         jet_speed: 340.0,
         stars,
@@ -115,6 +120,20 @@ fn astroid_logic(engine: &mut Engine, game_state: &mut GameState) {
             }
         }
     }
+    // handle if two astroids collide
+    for event in engine.collision_events.drain(..) {
+        match event.state {
+            CollisionState::Begin => {
+                // Move either of them away
+                if event.pair.0.starts_with("astroid") && event.pair.1.starts_with("astroid") {
+                    let astroid_sprite = engine.sprites.get_mut(&event.pair.0).unwrap();
+                    astroid_sprite.translation.x = WINDOW_WITDH * 5.0;
+                    astroid_sprite.scale = 0.1;
+                }
+            }
+            CollisionState::End => {}
+        }
+    }
 }
 
 fn space_ship_logic(engine: &mut Engine, game_state: &mut GameState) {
@@ -159,5 +178,50 @@ fn space_ship_logic(engine: &mut Engine, game_state: &mut GameState) {
         space_ship.translation.y = HEIGHT_OFFSET - VERTICAL_PLAYER_OFFSET;
     } else if space_ship.translation.y < -(HEIGHT_OFFSET - VERTICAL_PLAYER_OFFSET - 30.0) {
         space_ship.translation.y = -HEIGHT_OFFSET + VERTICAL_PLAYER_OFFSET + 30.0;
+    }
+}
+
+fn collision_logic(engine: &mut Engine, game_state: &mut GameState) {
+    let mut game_over = false;
+    for i in 0..game_state.astroids.length() {
+        let astroid_sprite = engine.sprites.get_mut(&format!("astroid_{}", i)).unwrap();
+        if game_state.astroids[i].visible && astroid_sprite.scale > 0.85 {
+            for event in engine.collision_events.drain(..) {
+                match event.state {
+                    CollisionState::Begin => {
+                        if event.pair.0 == "space_ship" || event.pair.1 == "space_ship" {
+                            // handle spaceship collision
+                            let astroid_name: &str;
+                            if event.pair.0 == "space_ship" {
+                                astroid_name = &event.pair.1;
+                            } else {
+                                astroid_name = &event.pair.0;
+                            }
+                            // let space_ship_sprite = engine.sprites.get_mut("space_ship").unwrap();
+                            let astroid_sprite = engine.sprites.get_mut(astroid_name).unwrap();
+                            astroid_sprite.collider.points();
+                            // println!("{} {}", astroid_name, astroid_sprite.scale);
+                            if astroid_sprite.scale > 0.8 {
+                                // to keep 3 d affect check for scale of astroid to be greater than 0.95
+                                // if scale is more than 0.9 then this is a collision.
+                                // This is a collision
+                                // FIXME: need to figure out a way for consistent collision
+                                // ref: https://github.com/CleanCut/rusty_engine/issues/71
+                                // println!("stopppp!!!");
+                                game_over = true;
+                            }
+                        }
+                    }
+                    CollisionState::End => {}
+                }
+            }
+        }
+    }
+    if game_over == true {
+        // println!("stopping");
+        let game_over_text = engine.add_text("game_over", "You Lost!");
+        game_over_text.font_size = 128.0;
+        engine.audio_manager.play_sfx(SfxPreset::Jingle3, 0.5);
+        exit(0);
     }
 }
