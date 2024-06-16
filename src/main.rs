@@ -24,8 +24,8 @@ fn main() {
         let star_sprite = game.add_sprite(format!("star_{}", i), "sprite/rick_n_morty/star.png");
         star_sprite.scale = 0.009;
         // 0.005 -> 0.01
-        star_sprite.translation.x = star.x;
-        star_sprite.translation.y = star.y;
+        star_sprite.translation.x = star.co_ordinate.x;
+        star_sprite.translation.y = star.co_ordinate.y;
         stars.push(star);
     }
 
@@ -52,12 +52,14 @@ fn star_logic(engine: &mut Engine, game_state: &mut GameState) {
     // better feel and spaceship is always in center!?
     for i in 0..TOTAL_STARS {
         let star_stripe = engine.sprites.get_mut(&format!("star_{}", i)).unwrap();
-        star_stripe.translation.x =
-            (game_state.stars[i].x / game_state.stars[i].z) * (WINDOW_WITDH / 2.0);
-        star_stripe.translation.y =
-            (game_state.stars[i].y / game_state.stars[i].z) * (WINDOW_HEIGHT / 2.0);
-        game_state.stars[i].z -= rng.gen_range(0.0..10.0);
-        if game_state.stars[i].z < 1.0 {
+        star_stripe.translation.x = (game_state.stars[i].co_ordinate.x
+            / game_state.stars[i].co_ordinate.z)
+            * (WINDOW_WITDH / 2.0);
+        star_stripe.translation.y = (game_state.stars[i].co_ordinate.y
+            / game_state.stars[i].co_ordinate.z)
+            * (WINDOW_HEIGHT / 2.0);
+        game_state.stars[i].co_ordinate.z -= rng.gen_range(0.0..10.0);
+        if game_state.stars[i].co_ordinate.z < 1.0 {
             game_state.stars[i] = Star::new();
         }
     }
