@@ -1,6 +1,6 @@
-use std::process::exit;
+use std::{borrow::{Borrow, BorrowMut}, iter::Cloned, process::exit};
 
-use bevy::render::render_resource::encase::rts_array::Length;
+use bevy::{reflect::{GetField, Reflect}, render::render_resource::encase::rts_array::Length};
 use rand::Rng;
 use rick_n_morty_space_travel::{
     astroid::Astroid, star::Star, TOTAL_ASTROIDS, TOTAL_STARS, WINDOW_HEIGHT, WINDOW_WITDH,
@@ -12,6 +12,7 @@ struct GameState {
     jet_speed: f32,
     stars: Vec<Star>,
     astroids: Vec<Astroid>,
+    game_over: bool
 }
 
 fn main() {
@@ -60,14 +61,20 @@ fn main() {
     // Don't let stars run over spaceship
     space_ship_sprite.layer = 2.0;
     space_ship_sprite.collision = true;
+
+    let explosion = game.add_sprite("explosion", "sprite/rick_n_morty/explosion.png");
+    explosion.scale = 0.0;
+
     game.add_logic(space_ship_logic);
     game.add_logic(star_logic);
     game.add_logic(astroid_logic);
     game.add_logic(collision_logic);
+    game.add_logic(game_over);
     game.run(GameState {
         jet_speed: 340.0,
         stars,
         astroids,
+        game_over: false,
     });
 }
 
@@ -94,6 +101,9 @@ fn star_logic(engine: &mut Engine, game_state: &mut GameState) {
 }
 
 fn astroid_logic(engine: &mut Engine, game_state: &mut GameState) {
+    if game_state.game_over == true {
+        return
+    }
     let mut rng = rand::thread_rng();
     let chance: f32 = rng.gen_range(0.0..1.0);
     if chance < 0.01 {
@@ -137,6 +147,9 @@ fn astroid_logic(engine: &mut Engine, game_state: &mut GameState) {
 }
 
 fn space_ship_logic(engine: &mut Engine, game_state: &mut GameState) {
+    if game_state.game_over == true {
+        return
+    }
     // engine.show_colliders = true;
     let space_ship = engine.sprites.get_mut("space_ship").unwrap();
 
@@ -182,46 +195,36 @@ fn space_ship_logic(engine: &mut Engine, game_state: &mut GameState) {
 }
 
 fn collision_logic(engine: &mut Engine, game_state: &mut GameState) {
-    let mut game_over = false;
+    if game_state.game_over == true {
+        return
+    }
+    let space_ship = engine.sprites.get("space_ship").unwrap();
     for i in 0..game_state.astroids.length() {
-        let astroid_sprite = engine.sprites.get_mut(&format!("astroid_{}", i)).unwrap();
+        let astroid_sprite = engine.sprites.get(&format!("astroid_{}", i)).unwrap();
         if game_state.astroids[i].visible && astroid_sprite.scale > 0.85 {
-            for event in engine.collision_events.drain(..) {
-                match event.state {
-                    CollisionState::Begin => {
-                        if event.pair.0 == "space_ship" || event.pair.1 == "space_ship" {
-                            // handle spaceship collision
-                            let astroid_name: &str;
-                            if event.pair.0 == "space_ship" {
-                                astroid_name = &event.pair.1;
-                            } else {
-                                astroid_name = &event.pair.0;
-                            }
-                            // let space_ship_sprite = engine.sprites.get_mut("space_ship").unwrap();
-                            let astroid_sprite = engine.sprites.get_mut(astroid_name).unwrap();
-                            astroid_sprite.collider.points();
-                            // println!("{} {}", astroid_name, astroid_sprite.scale);
-                            if astroid_sprite.scale > 0.8 {
-                                // to keep 3 d affect check for scale of astroid to be greater than 0.95
-                                // if scale is more than 0.9 then this is a collision.
-                                // This is a collision
-                                // FIXME: need to figure out a way for consistent collision
-                                // ref: https://github.com/CleanCut/rusty_engine/issues/71
-                                // println!("stopppp!!!");
-                                game_over = true;
-                            }
-                        }
-                    }
-                    CollisionState::End => {}
-                }
+            let val = Collider::colliding(astroid_sprite, space_ship);
+            if val {
+                game_state.game_over = true;
+                break;
             }
         }
     }
-    if game_over == true {
-        // println!("stopping");
+
+}
+
+fn game_over(engine: &mut Engine, game_state: &mut GameState) {
+    if game_state.game_over == true {
+        let mut engine_1 = engine.sprites.clone();
+        let explosion = engine.sprites.get_mut("explosion").unwrap();
+        let space_ship = engine_1.get_mut("space_ship").unwrap();
+        explosion.layer = 3.0;
+        explosion.scale = 0.6;
+        explosion.translation.x = space_ship.translation.x;
+        explosion.translation.y = space_ship.translation.y;
+        // engine.sprites.remove("space_ship");
         let game_over_text = engine.add_text("game_over", "You Lost!");
         game_over_text.font_size = 128.0;
-        engine.audio_manager.play_sfx(SfxPreset::Jingle3, 0.5);
-        exit(0);
+        engine.audio_manager.play_sfx(SfxPreset::Impact1, 0.5);
+        // exit(0);
     }
 }
