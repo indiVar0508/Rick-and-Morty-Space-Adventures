@@ -2,4 +2,5 @@
 
 Rick and morty are in space and rick's ship is out of ammo!, gotta help them navigate astroid belt and reach home safely.
 
-![](./assets/rick_n_morty_space_demo.mp4)
+
+https://github.com/user-attachments/assets/1b93fd62-9d23-4a43-bdbb-203dc2b053e6
