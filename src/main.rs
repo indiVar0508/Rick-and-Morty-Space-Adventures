@@ -1,6 +1,4 @@
-use std::{borrow::{Borrow, BorrowMut}, iter::Cloned, process::exit};
-
-use bevy::{reflect::{GetField, Reflect}, render::render_resource::encase::rts_array::Length};
+use bevy::render::render_resource::encase::rts_array::Length;
 use rand::Rng;
 use rick_n_morty_space_travel::{
     astroid::Astroid, star::Star, TOTAL_ASTROIDS, TOTAL_STARS, WINDOW_HEIGHT, WINDOW_WITDH,
@@ -12,7 +10,7 @@ struct GameState {
     jet_speed: f32,
     stars: Vec<Star>,
     astroids: Vec<Astroid>,
-    game_over: bool
+    game_over: bool,
 }
 
 fn main() {
@@ -102,7 +100,7 @@ fn star_logic(engine: &mut Engine, game_state: &mut GameState) {
 
 fn astroid_logic(engine: &mut Engine, game_state: &mut GameState) {
     if game_state.game_over == true {
-        return
+        return;
     }
     let mut rng = rand::thread_rng();
     let chance: f32 = rng.gen_range(0.0..1.0);
@@ -148,7 +146,7 @@ fn astroid_logic(engine: &mut Engine, game_state: &mut GameState) {
 
 fn space_ship_logic(engine: &mut Engine, game_state: &mut GameState) {
     if game_state.game_over == true {
-        return
+        return;
     }
     // engine.show_colliders = true;
     let space_ship = engine.sprites.get_mut("space_ship").unwrap();
@@ -196,7 +194,7 @@ fn space_ship_logic(engine: &mut Engine, game_state: &mut GameState) {
 
 fn collision_logic(engine: &mut Engine, game_state: &mut GameState) {
     if game_state.game_over == true {
-        return
+        return;
     }
     let space_ship = engine.sprites.get("space_ship").unwrap();
     for i in 0..game_state.astroids.length() {
@@ -209,7 +207,6 @@ fn collision_logic(engine: &mut Engine, game_state: &mut GameState) {
             }
         }
     }
-
 }
 
 fn game_over(engine: &mut Engine, game_state: &mut GameState) {
